@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Paper & ink — warm neutrals, not pure white/grey */
+  --color-paper: #fbf8f5;
+  --color-surface: #ffffff;
+  --color-line: #e7dfd8;
+  --color-ink: #1f1a17;
+  --color-ink-2: #5c524c;
+  --color-ink-3: #7a6f68;
+
+  /* Blood — the only brand colour */
+  --color-blood-50: #fdf1f0;
+  --color-blood-100: #faddda;
+  --color-blood-600: #c4271f;
+  --color-blood-700: #a11e18;
+  --color-blood-900: #5e120f;
+
+  /* Semantic */
+  --color-ok-bg: #e8f4ec;
+  --color-ok: #1e6b3a;
+  --color-warn-bg: #fff3dc;
+  --color-warn: #8a5300;
+  --color-off-bg: #efeae6;
+  --color-off: #5c524c;
+  --color-err: #b3261e;
+
+  --font-sans: var(--font-bengali), system-ui, sans-serif;
+
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    text-rendering: optimizeLegibility;
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid rgb(196 39 31 / 0.4);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-blood-100);
+    color: var(--color-blood-900);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

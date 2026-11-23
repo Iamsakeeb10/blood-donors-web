@@ -1,36 +1,25 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# রক্তদাতা তালিকা — Blood Donor Directory
 
-## Getting Started
+A tiny Bangla, mobile-first blood donor directory. Pick a blood group, find a donor, call
+them. Join yourself in one short form — no login, no OTP.
 
-First, run the development server:
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # fill in the Firebase keys (see below)
+npm install
+npm run dev                  # http://localhost:3000
+npm run build                # production check
+npm run lint
+npm run test                 # unit tests (pure functions)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Firebase keys live in `.env.local` (never committed). See `.env.example` for the required
+keys. The Firebase project, Anonymous Auth, App Check and Firestore rules are set up manually
+in the Firebase Console — see [`firestore.rules`](./firestore.rules).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Where everything lives
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Plan & build order:** [`MVP_IMPLEMENTATION_PLAN.md`](./MVP_IMPLEMENTATION_PLAN.md)
+- **Product/design rationale:** [`FEATURE_AND_DEV_GUIDE.md`](./FEATURE_AND_DEV_GUIDE.md)
+- `app/` — routes (App Router), `components/` — UI, `lib/` — data & logic.
