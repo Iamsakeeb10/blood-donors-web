@@ -17,5 +17,5 @@ export const ADMIN_CONTACT = {
  */
 export const COOLDOWN_DAYS = 120;
 
-/** Max donors per search (Firestore reads). Must stay <= 200 (see firestore.rules). */
-export const SEARCH_LIMIT = 100;
+/** Donors fetched per page (= Firestore reads per search/"load more"). Must stay <= 200 (firestore.rules). */
+export const PAGE_SIZE = 30;

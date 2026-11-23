@@ -1,7 +1,7 @@
-import type { DocumentData } from "firebase/firestore";
+import type { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
 import type { BloodGroup, Donor } from "./data";
 import { isBloodGroup, sortDonors } from "./data";
-import { SEARCH_LIMIT } from "./config";
+import { PAGE_SIZE } from "./config";
 import { getDb } from "./firebase";
 import { M } from "./messages";
 import type { DonorInput } from "./validation";
@@ -80,37 +80,62 @@ function getFirestoreApi(): Promise<FirestoreApi> {
   return firestoreApi;
 }
 
-export type DonorQueryResult = { donors: Donor[]; truncated: boolean };
+export type DonorPageCursor = {
+  phase: "available" | "unavailable";
+  last: QueryDocumentSnapshot | null;
+};
 
-export async function queryDonors(
+export type DonorPage = {
+  donors: Donor[];
+  /** null when there is nothing more to load. */
+  next: DonorPageCursor | null;
+};
+
+/**
+ * Pages donors with Firestore cursors. Available donors come first, then the rest.
+ * Only equality filters + the default document-id order are used, so no composite
+ * index is needed. Each page costs at most PAGE_SIZE reads.
+ */
+export async function fetchDonorPage(
   bloodGroup: BloodGroup,
-  district?: string,
-): Promise<DonorQueryResult> {
+  district: string | undefined,
+  cursor: DonorPageCursor | null,
+): Promise<DonorPage> {
   try {
     const [fs, db] = await Promise.all([getFirestoreApi(), getDb()]);
     const ref = fs.collection(db, "donors");
-    const snapshot = district
-      ? await fs.getDocs(
-          fs.query(
-            ref,
-            fs.where("bloodGroup", "==", bloodGroup),
-            fs.where("district", "==", district),
-            fs.limit(SEARCH_LIMIT),
-          ),
-        )
-      : await fs.getDocs(
-          fs.query(
-            ref,
-            fs.where("bloodGroup", "==", bloodGroup),
-            fs.limit(SEARCH_LIMIT),
-          ),
-        );
+    let phase: DonorPageCursor["phase"] = cursor?.phase ?? "available";
+    let last = cursor?.last ?? null;
+    const donors: Donor[] = [];
 
-    const donors = snapshot.docs
-      .map((entry) => toDonor(entry.id, entry.data()))
-      .filter((donor): donor is Donor => donor !== null);
+    while (donors.length < PAGE_SIZE) {
+      const remaining = PAGE_SIZE - donors.length;
+      const constraints = [
+        fs.where("bloodGroup", "==", bloodGroup),
+        ...(district ? [fs.where("district", "==", district)] : []),
+        fs.where("available", "==", phase === "available"),
+        ...(last ? [fs.startAfter(last)] : []),
+        fs.limit(remaining),
+      ];
+      const snapshot = await fs.getDocs(fs.query(ref, ...constraints));
 
-    return { donors: sortDonors(donors), truncated: snapshot.size >= SEARCH_LIMIT };
+      for (const entry of snapshot.docs) {
+        const donor = toDonor(entry.id, entry.data());
+        if (donor) donors.push(donor);
+      }
+
+      if (snapshot.size < remaining) {
+        if (phase === "available") {
+          phase = "unavailable";
+          last = null;
+          continue;
+        }
+        return { donors: sortDonors(donors), next: null };
+      }
+      last = snapshot.docs[snapshot.docs.length - 1];
+    }
+
+    return { donors: sortDonors(donors), next: { phase, last } };
   } catch (error) {
     throw toDonorError(error, M.errors.loadFailed);
   }

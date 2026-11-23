@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BloodGroupPicker } from "@/components/BloodGroupPicker";
 import { DonorList } from "@/components/DonorList";
 import { ShareSheet } from "@/components/ShareSheet";
@@ -17,10 +17,11 @@ import {
   parseDistrictParam,
   parseGroupParam,
   rank,
+  sortDonors,
   type BloodGroup,
   type Donor,
 } from "@/lib/data";
-import { DonorError, getMyDonor, queryDonors } from "@/lib/donors";
+import { DonorError, fetchDonorPage, getMyDonor, type DonorPageCursor } from "@/lib/donors";
 import { getHasEntry, setHasEntry, subscribeHasEntry } from "@/lib/entryState";
 import { ensureUser } from "@/lib/firebase";
 import { toBn } from "@/lib/format";
@@ -178,7 +179,10 @@ function SearchResults({ group, district, onSearchAllDistricts }: SearchResultsP
   const [donors, setDonors] = useState<Donor[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [truncated, setTruncated] = useState(false);
+  const [next, setNext] = useState<DonorPageCursor | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+  const mountedRef = useRef(true);
   const [slow, setSlow] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
@@ -191,11 +195,11 @@ function SearchResults({ group, district, onSearchAllDistricts }: SearchResultsP
       if (!cancelled) setSlow(true);
     }, 8000);
 
-    queryDonors(group, district || undefined)
+    fetchDonorPage(group, district || undefined, null)
       .then((result) => {
         if (cancelled) return;
         setDonors(result.donors);
-        setTruncated(result.truncated);
+        setNext(result.next);
       })
       .catch((queryError: unknown) => {
         if (cancelled) return;
@@ -216,11 +220,41 @@ function SearchResults({ group, district, onSearchAllDistricts }: SearchResultsP
     };
   }, [group, district, attempt]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  async function loadMore() {
+    if (!next || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreFailed(false);
+    try {
+      const page = await fetchDonorPage(group, district || undefined, next);
+      if (!mountedRef.current) return;
+      setDonors((current) => {
+        const seen = new Set((current ?? []).map((donor) => donor.uid));
+        return sortDonors([
+          ...(current ?? []),
+          ...page.donors.filter((donor) => !seen.has(donor.uid)),
+        ]);
+      });
+      setNext(page.next);
+    } catch {
+      if (mountedRef.current) setLoadMoreFailed(true);
+    } finally {
+      if (mountedRef.current) setLoadingMore(false);
+    }
+  }
+
   function retry() {
     setLoading(true);
     setError(null);
     setDonors(null);
-    setTruncated(false);
+    setNext(null);
+    setLoadMoreFailed(false);
     setSlow(false);
     setFilterText("");
     setAttempt((current) => current + 1);
@@ -264,7 +298,7 @@ function SearchResults({ group, district, onSearchAllDistricts }: SearchResultsP
   const countLabel = donors
     ? filterText.trim()
       ? M.search.filteredCount(toBn(filteredDonors?.length ?? 0))
-      : `${M.search.resultCount(toBn(donors.length))}${district ? ` · ${district}` : ""}`
+      : `${M.search.resultCount(`${toBn(donors.length)}${next ? "+" : ""}`)}${district ? ` · ${district}` : ""}`
     : M.search.loading;
 
   return (
@@ -373,13 +407,28 @@ function SearchResults({ group, district, onSearchAllDistricts }: SearchResultsP
         />
       ) : null}
 
-      {truncated ? (
-        <p
-          role="status"
-          className="mt-3 rounded-control bg-warn-bg px-3 py-2 text-sm font-semibold leading-relaxed text-warn"
-        >
-          {M.search.truncated}
-        </p>
+      {!loading && next && !filterText.trim() ? (
+        <div className="mt-3">
+          {loadMoreFailed ? (
+            <p role="alert" className="mb-2 text-sm leading-relaxed text-err">
+              {M.search.loadMoreFailed}
+            </p>
+          ) : null}
+          <Button
+            variant="secondary"
+            loading={loadingMore}
+            onClick={() => {
+              void loadMore();
+            }}
+          >
+            {M.search.loadMore}
+          </Button>
+          {!district && donors && donors.length >= 90 ? (
+            <p className="mt-2 text-center text-sm leading-relaxed text-ink-3">
+              {M.search.narrowHint}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <ShareSheet
