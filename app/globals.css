@@ -77,3 +77,20 @@
     scroll-behavior: auto !important;
   }
 }
+
+.date-input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  text-align: left;
+}
+.date-input::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+.date-input::-webkit-calendar-picker-indicator {
+  margin: 0 0 0 auto;
+  padding: 0;
+  opacity: 0.6;
+}

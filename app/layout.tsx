@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Bengali } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { M } from "@/lib/messages";
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="bn" className={bengali.variable}>
       <body className="min-h-dvh bg-paper font-sans text-ink antialiased">
         <AppShell>{children}</AppShell>
+        <Analytics />
       </body>
     </html>
   );

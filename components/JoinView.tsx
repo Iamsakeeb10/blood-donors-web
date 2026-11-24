@@ -488,10 +488,9 @@ export function JoinView() {
             disabled={submitting || toggling}
             title={M.actions.delete}
             aria-label={M.actions.delete}
-            className="inline-flex min-h-12 items-center gap-1.5 rounded-control px-2.5 py-1 text-sm font-semibold text-err transition hover:bg-blood-50 active:translate-y-px disabled:opacity-50"
+            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-control text-err transition hover:bg-blood-50 active:translate-y-px disabled:opacity-50"
           >
-            <TrashIcon className="h-4 w-4" />
-            <span>{M.actions.delete}</span>
+            <TrashIcon className="h-5 w-5" />
           </button>
         ) : null}
       </div>
@@ -680,14 +679,24 @@ export function JoinView() {
                   id="lastDonated"
                 >
                   {(control) => (
-                    <input
-                      {...control}
-                      className={inputClass}
-                      type="date"
-                      max={todayIso()}
-                      value={values.lastDonated}
-                      onChange={(event) => update("lastDonated", event.target.value)}
-                    />
+                    <div className="relative">
+                      <input
+                        {...control}
+                        className={`${inputClass} date-input`}
+                        type="date"
+                        max={todayIso()}
+                        value={values.lastDonated}
+                        onChange={(event) => update("lastDonated", event.target.value)}
+                      />
+                      {!values.lastDonated ? (
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-y-0 left-4 right-12 flex items-center truncate text-base text-ink-3"
+                        >
+                          {M.form.datePlaceholder}
+                        </span>
+                      ) : null}
+                    </div>
                   )}
                 </Field>
                 <div className="text-right">
@@ -808,18 +817,6 @@ export function JoinView() {
               </div>
             </div>
           </form>
-
-          {existing ? (
-            <div className="mt-8 border-t border-line pt-6">
-              <Button
-                variant="danger"
-                onClick={() => setDeleteOpen(true)}
-                disabled={submitting || toggling}
-              >
-                {M.actions.delete}
-              </Button>
-            </div>
-          ) : null}
 
           <div className="mt-8 text-center text-sm leading-relaxed text-ink-3">
             {M.join.oldInfoContact}{" "}

@@ -186,6 +186,7 @@ export const M = {
     pickOne: "বাছাই করুন",
     phoneOk: "সঠিক মোবাইল নম্বর",
     availableHint: "প্রয়োজনে দাতার তালিকায় আপনার উপস্থিতি সক্রিয় দেখাবে",
+    datePlaceholder: "তারিখ বাছাই করুন",
     dateOptional: "ঐচ্ছিক — জানা থাকলে যোগ করতে পারেন",
   },
   contactDialog: {

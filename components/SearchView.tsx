@@ -335,7 +335,7 @@ function SearchResults({ group, district, onSearchAllDistricts }: SearchResultsP
             onChange={(e) => setFilterText(e.target.value)}
             placeholder={M.search.filterPlaceholder}
             aria-label={M.search.filterPlaceholder}
-            className="h-11 w-full rounded-control border border-line bg-surface pl-10 pr-20 text-base text-ink placeholder:text-ink-3 outline-none transition focus:border-blood-600 focus:ring-1 focus:ring-blood-600"
+            className={`h-11 w-full rounded-control border border-line bg-surface pl-10 ${filterText ? "pr-20" : "pr-3"} text-base text-ink placeholder:text-ink-3 placeholder:text-ellipsis outline-none transition focus:border-blood-600 focus:ring-1 focus:ring-blood-600`}
           />
           {filterText ? (
             <button
