@@ -145,3 +145,37 @@ export function ensureUser(): Promise<User> {
 
   return userPromise;
 }
+
+/** Clears the memoised anonymous session so a later page re-authenticates. */
+function resetAnonymousUser(): void {
+  userPromise = null;
+}
+
+/**
+ * Admin-only auth helpers. These deliberately do not reuse `ensureUser`, which
+ * creates an anonymous account; signing in with email/password replaces it.
+ */
+export async function getCurrentUser(): Promise<User | null> {
+  if (typeof window === "undefined") return null;
+  await ensureAppCheck();
+  const { getAuth } = await import("firebase/auth");
+  const auth = getAuth(getFirebaseApp());
+  await auth.authStateReady();
+  return auth.currentUser;
+}
+
+export async function signInAdmin(email: string, password: string): Promise<User> {
+  await ensureAppCheck();
+  const { getAuth, signInWithEmailAndPassword } = await import("firebase/auth");
+  const auth = getAuth(getFirebaseApp());
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+  resetAnonymousUser();
+  return credential.user;
+}
+
+export async function signOutCurrentUser(): Promise<void> {
+  const { getAuth, signOut } = await import("firebase/auth");
+  const auth = getAuth(getFirebaseApp());
+  await signOut(auth);
+  resetAnonymousUser();
+}

@@ -55,7 +55,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="bn" className={bengali.variable}>
-      <body className="min-h-dvh bg-paper font-sans text-ink antialiased">
+      <body
+        suppressHydrationWarning
+        className="min-h-dvh bg-paper font-sans text-ink antialiased"
+      >
         <AppShell>{children}</AppShell>
         <Analytics />
       </body>

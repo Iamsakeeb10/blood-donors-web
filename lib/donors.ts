@@ -210,3 +210,81 @@ export async function findDonorsByPhone(phone: string): Promise<Donor[]> {
     throw toDonorError(error, M.errors.loadFailed);
   }
 }
+
+/** A donor plus the Firestore document id, which may differ from `uid` for legacy rows. */
+export type AdminDonor = Donor & { docId: string };
+
+function toAdminDonor(id: string, data: DocumentData): AdminDonor | null {
+  const donor = toDonor(id, data);
+  return donor ? { ...donor, docId: id } : null;
+}
+
+/** Checks the admins/{uid} marker managed from the Firebase Console. */
+export async function isAdminUser(uid: string): Promise<boolean> {
+  try {
+    const [fs, db] = await Promise.all([getFirestoreApi(), getDb()]);
+    const snapshot = await fs.getDoc(fs.doc(db, "admins", uid));
+    return snapshot.exists();
+  } catch (error) {
+    throw toDonorError(error, M.errors.loadFailed);
+  }
+}
+
+/**
+ * Loads every donor for the admin table. The collection is small for this app;
+ * if it grows, replace this with cursor pagination plus a count aggregation.
+ */
+export async function listAllDonors(): Promise<AdminDonor[]> {
+  try {
+    const [fs, db] = await Promise.all([getFirestoreApi(), getDb()]);
+    const snapshot = await fs.getDocs(fs.collection(db, "donors"));
+    return snapshot.docs
+      .map((entry) => toAdminDonor(entry.id, entry.data()))
+      .filter((donor): donor is AdminDonor => donor !== null);
+  } catch (error) {
+    throw toDonorError(error, M.errors.loadFailed);
+  }
+}
+
+export async function adminSaveDonor(
+  input: DonorInput,
+  existing: AdminDonor | null,
+): Promise<AdminDonor> {
+  const now = Date.now();
+  try {
+    const [fs, db] = await Promise.all([getFirestoreApi(), getDb()]);
+    const ref = existing
+      ? fs.doc(db, "donors", existing.docId)
+      : fs.doc(fs.collection(db, "donors"));
+    const donor: Donor = {
+      uid: existing ? existing.uid : ref.id,
+      name: input.name,
+      bloodGroup: input.bloodGroup,
+      phone: input.phone,
+      district: input.district,
+      available: input.available,
+      lastDonated: input.lastDonated,
+      createdAt: existing && existing.createdAt > 0 ? existing.createdAt : now,
+      updatedAt: now,
+    };
+    if (input.area) donor.area = input.area;
+
+    const payload: Record<string, unknown> = { ...donor };
+    if (!input.lastDonated) delete payload.lastDonated;
+    if (!input.area) delete payload.area;
+
+    await fs.setDoc(ref, payload);
+    return { ...donor, docId: ref.id };
+  } catch (error) {
+    throw toDonorError(error, M.errors.saveFailed);
+  }
+}
+
+export async function adminDeleteDonor(docId: string): Promise<void> {
+  try {
+    const [fs, db] = await Promise.all([getFirestoreApi(), getDb()]);
+    await fs.deleteDoc(fs.doc(db, "donors", docId));
+  } catch (error) {
+    throw toDonorError(error, M.errors.deleteFailed);
+  }
+}

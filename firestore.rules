@@ -19,21 +19,40 @@ service cloud.firestore {
         && d.createdAt is number && d.updatedAt is number;
     }
 
+    // Admin membership is managed only from the Firebase Console:
+    // create a document at admins/{auth uid}. No client writes are allowed.
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(db)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{uid} {
+      // An admin may check whether their own account is an admin.
+      allow get: if request.auth != null && request.auth.uid == uid;
+    }
+
     match /donors/{id} {
       // Public reads, but a single list call cannot dump the whole collection.
       allow get: if true;
-      allow list: if request.query.limit <= 200;
+      allow list: if isAdmin() || request.query.limit <= 200;
 
-      allow create: if request.auth != null && request.auth.uid == id
-                    && request.resource.data.uid == id
-                    && validDonor(request.resource.data);
+      allow create: if (request.auth != null && request.auth.uid == id
+                        && request.resource.data.uid == id
+                        && validDonor(request.resource.data))
+                    || (isAdmin() && validDonor(request.resource.data));
 
-      allow update: if request.auth != null && request.auth.uid == id
-                    && request.resource.data.uid == id
-                    && request.resource.data.createdAt == resource.data.createdAt
-                    && validDonor(request.resource.data);
+      allow update: if (request.auth != null && request.auth.uid == id
+                        && request.resource.data.uid == id
+                        && request.resource.data.createdAt == resource.data.createdAt
+                        && validDonor(request.resource.data))
+                    || (isAdmin()
+                        && (!('uid' in resource.data)
+                            || request.resource.data.uid == resource.data.uid)
+                        && (!('createdAt' in resource.data)
+                            || request.resource.data.createdAt == resource.data.createdAt)
+                        && validDonor(request.resource.data));
 
-      allow delete: if request.auth != null && request.auth.uid == id;
+      allow delete: if (request.auth != null && request.auth.uid == id) || isAdmin();
     }
   }
 }
